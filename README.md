@@ -37,5 +37,5 @@ from ${PROJECT_ROOT} run:
 ## Running unit tests
 
 from ${PROJECT_ROOT} run:
-```pytest --disable-warnings```
-**NOTE**: Some may will fail if as they depend on generated data from ```churn_library```
+```pytest -o log_cli=true```
+**NOTE**: Some may will fail if as they depend on generated data from ```churn_library. Also, logs will be outputted to terminal and logs/test_logs.log```
