@@ -4,7 +4,7 @@
     Date: May 28th 2023
 """
 
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, plot_roc_curve
 from sklearn.model_selection import GridSearchCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
@@ -104,7 +104,8 @@ def encoder_helper(data, column_name):
     """
 
     churn_column_name = f"{column_name}_Churn"
-    data[churn_column_name] = data.groupby(column_name)["Churn"].transform("mean")
+    data[churn_column_name] = data.groupby(
+        column_name)["Churn"].transform("mean")
     return data
 
 
@@ -148,6 +149,7 @@ def classification_report_image(y_train,
     output:
              None
     """
+    plt.figure(figsize=(20, 10))
     plt.rc('figure', figsize=(5, 5))
     plt.text(0.01, 1.25, str('Random Forest Train'), {
              'fontsize': 10}, fontproperties='monospace')
@@ -160,6 +162,7 @@ def classification_report_image(y_train,
     plt.axis('off')
     plt.savefig(f"{constants.RESULTS_DIR}/random_forest_report.png")
 
+    plt.figure(figsize=(20, 10))
     plt.rc('figure', figsize=(5, 5))
     plt.text(0.01, 1.25, str('Logistic Regression Train'),
              {'fontsize': 10}, fontproperties='monospace')
@@ -187,7 +190,11 @@ def feature_importance_plot(model, x_data):
     output:
              None
     """
-    importances = model.best_estimator_.feature_importances_
+    try:
+        importances = model.best_estimator_.feature_importances_
+    except AttributeError:
+        importances = model.feature_importances_ # workaround when saved model is passed to function
+        
     indices = np.argsort(importances)[::-1]
     names = [x_data.columns[i] for i in indices]
 
@@ -243,6 +250,15 @@ def train_models(x_train, x_test, y_train, y_test, x_data):
     y_train_preds_lr = lrc.predict(x_train)
     y_test_preds_lr = lrc.predict(x_test)
 
+    lrc_plot = plot_roc_curve(lrc, x_test, y_test)
+    plt.figure(figsize=(15, 8))
+    ax = plt.gca()
+    plot_roc_curve(cv_rfc.best_estimator_, x_test, y_test, ax=ax, alpha=0.8)
+    lrc_plot.plot(ax=ax, alpha=0.8)
+    plt.savefig(f"{constants.RESULTS_DIR}/roc_plot.png")
+
+    logging.info(f"INFO: ROC plots are saved in {constants.RESULTS_DIR}")
+
     classification_report_image(
         y_train,
         y_test,
@@ -261,7 +277,8 @@ def main():
     for column_name in constants.CATEGORICAL_COLUMNS:
         data = encoder_helper(data, column_name)
 
-    x_train, x_test, y_train, y_test, x_data = perform_feature_engineering(data)
+    x_train, x_test, y_train, y_test, x_data = perform_feature_engineering(
+        data)
     train_models(x_train, x_test, y_train, y_test, x_data)
 
 
